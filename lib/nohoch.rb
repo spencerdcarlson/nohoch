@@ -11,15 +11,14 @@ module Nohoch
   end
 
   class CLI
-    attr_reader :options, :dir, :out, :files, :user_file_stats
+    attr_reader :options, :directory, :out, :files, :user_file_stats
 
     def initialize
-      @options = {}
+      @options = Struct.new(:verbose, :directory, :branch, :files).new(false, Dir.pwd, "origin/master", [])
       @user_file_stats = UserFileStats.new()
       @out = []
       parse_opts
-      set_dir
-
+      set_directory
       get_files
       stats
       # p @options
@@ -37,27 +36,30 @@ module Nohoch
     def parse_opts
       OptionParser.new do |opts|
         opts.banner = "Usage: nohoch [options]"
-        opts.on("-v", "--[no-]verbose", "Run verbosely") { |v| @options[:verbose] = v }
+        opts.on("-dDIRECTORY", "--directory=DIRECTORY", "git directory to check") { |o| @options.directory = o }
+        opts.on("-bBRANCH", "--branch=BRANCH", "git branch") { |o| @options.branch = o }
+        opts.on("-fFILE,...", "--files FILE,...", "file") { |o| @options.files = o.split(",") }
+        opts.on("-v", "--[no-]verbose", "Run verbosely") { |o| @options.verbose = o }
       end.parse!
     end
 
-    def set_dir
-      dir = Pathname.new(ARGV[0])
-      raise "Not a dir" unless dir.directory?
-      raise "Directory does not contain an initialized git directroy" unless dir.join(".git").directory?
-      @dir = dir
+    def set_directory
+      directory = Pathname.new(@options.directory)
+      raise "Not a dir" unless directory.directory?
+      raise "Directory does not contain an initialized git directroy" unless directory.join(".git").directory?
+      @directory = directory
     end
 
     def stats
-      # @files.first(100).each do |filename|
-      @files.each do |filename|
-        Dir.chdir(@dir){
+      files = @options.files.empty? ? @files : @files.filter {|f| @options.files.include?(f) }
+      files.each do |filename|
+        Dir.chdir(@directory){
           # git log --no-merges --pretty=%an --numstat -10
-          IO.popen(["git", "--no-pager", "log", "--no-merges", "--pretty=%an", "--numstat", "--", filename, "origin/master", :err=>[:child, :out]]) {|git_io|
+          IO.popen(["git", "--no-pager", "log", "--no-merges", "--pretty=%an", "--numstat", "--", filename, @options.branch, :err=>[:child, :out]]) {|git_io|
             # TODO check that the output is in the correct format and raise exception if it is not.
             # capture the helpful debug info.
             result = git_io.read
-            p result
+            # p result
             out = result.split(/\n+/)
             out.each_slice(2) do |user, stat|
               matches = /(?<added>[\d-]+)\t(?<deleted>[\d-]+)\t(?<file>.*)/.match(stat)
@@ -75,9 +77,9 @@ module Nohoch
 
 
     def get_files
-      Dir.chdir(@dir){
+      Dir.chdir(@directory){
         # git ls-tree -r master --name-only
-        IO.popen(["git", "ls-tree", "-r", "origin/master", "--name-only", :err=>[:child, :out]]) {|git_io|
+        IO.popen(["git", "ls-tree", "-r", @options.branch, "--name-only", :err=>[:child, :out]]) {|git_io|
           @files = git_io.read.split(/\n+/)
         }
       }
