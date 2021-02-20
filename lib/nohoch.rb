@@ -55,14 +55,17 @@ module Nohoch
       files.each do |filename|
         Dir.chdir(@directory){
           # git log --no-merges --pretty=%an --numstat -10
-          IO.popen(["git", "--no-pager", "log", "--no-merges", "--pretty=%an", "--numstat", "--", filename, @options.branch, :err=>[:child, :out]]) {|git_io|
+          # git --no-pager log --pretty=oneline --follow -- $FILE
+          # git --no-pager log --pretty=tformat:"%h %an %s" --follow -- $FILE
+          IO.popen(["git", "--no-pager", "log", "--no-merges", "--follow", "--pretty=%an", "--numstat", "--", filename, @options.branch, :err=>[:child, :out]]) {|git_io|
             # TODO check that the output is in the correct format and raise exception if it is not.
             # capture the helpful debug info.
             result = git_io.read
-            # p result
+            p "[DEBUG] git log result: #{result}" if @options.verbose
             out = result.split(/\n+/)
             out.each_slice(2) do |user, stat|
               matches = /(?<added>[\d-]+)\t(?<deleted>[\d-]+)\t(?<file>.*)/.match(stat)
+              p "[DEBUG] user: #{user} matches: #{matches.inspect}" if @options.verbose
               added = matches[:added].to_i
               deleted = matches[:deleted].to_i
               file = matches[:file].chomp
