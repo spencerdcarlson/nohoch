@@ -57,7 +57,7 @@ module Nohoch
           # git log --no-merges --pretty=%an --numstat -10
           # git --no-pager log --pretty=oneline --follow -- $FILE
           # git --no-pager log --pretty=tformat:"%h %an %s" --follow -- $FILE
-          IO.popen(["git", "--no-pager", "log", "--no-merges", "--follow", "--pretty=%an", "--numstat", "--", filename, @options.branch, :err=>[:child, :out]]) {|git_io|
+          IO.popen(["git", "--no-pager", "log", "--no-merges", "--follow", "--pretty=%an", "--numstat", "--", filename, :err=>[:child, :out]]) {|git_io|
             # TODO check that the output is in the correct format and raise exception if it is not.
             # capture the helpful debug info.
             result = git_io.read

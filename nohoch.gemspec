@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name        = 'nohoch'
-  s.version     = '1.0.0.pre'
+  s.version     = '1.0.0.beta.1'
   s.executables << 'nohoch'
   s.summary     = "Nohoch simplifies who knows the most about a given file under git source control"
   s.description = "Who knows the most about this file?"
